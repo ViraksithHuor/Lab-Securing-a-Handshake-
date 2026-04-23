@@ -261,95 +261,113 @@
   </div>
 
   <script>
-    let csrfToken = '';
-    let isLoggedIn = false;
+  let csrfToken = '';
+  let isLoggedIn = false;
 
-    const output = document.getElementById('output');
-    const logoutBtn = document.getElementById('logoutBtn');
+  const output = document.getElementById('output');
+  const logoutBtn = document.getElementById('logoutBtn');
 
-    function log(data) {
-      output.textContent = JSON.stringify(data, null, 2);
-    }
+  function log(data) {
+    output.textContent = JSON.stringify(data, null, 2);
+  }
 
-    async function fetchCsrfToken() {
-      const res = await fetch('/api/csrf-token', {
-        method: 'GET',
-        credentials: 'same-origin'
+  async function fetchCsrfToken() {
+    try {
+      const res = await axios.get('/api/csrf-token', {
+        withCredentials: true
       });
 
-      const data = await res.json();
-      csrfToken = data.csrfToken;
-      log({ message: 'Fetched CSRF token', csrfToken });
+      csrfToken = res.data.csrfToken;
+
+      log({
+        message: 'Fetched CSRF token',
+        csrfToken
+      });
+    } catch (err) {
+      log(err.response?.data || { error: 'Could not fetch CSRF token' });
     }
+  }
 
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
 
-      const res = await fetch('/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify({
+    try {
+      const res = await axios.post(
+        '/login',
+        {
           username: document.getElementById('username').value,
           password: document.getElementById('password').value
-        })
-      });
-
-      const data = await res.json();
-      log(data);
-
-      if (res.ok) {
-        isLoggedIn = true;
-        logoutBtn.style.display = 'block';
-        await fetchCsrfToken();
-      }
-    });
-
-    logoutBtn.addEventListener('click', async (e) => {
-      e.preventDefault();
-
-      const res = await fetch('/logout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-csrf-token': csrfToken
         },
-        credentials: 'include'
-      });
+        {
+          withCredentials: true
+        }
+      );
 
-      const data = await res.json();
-      log(data);
+      log(res.data);
 
-      if (res.ok) {
-        isLoggedIn = false;
-        csrfToken = '';
-        logoutBtn.style.display = 'none';
-        document.getElementById('name').value = '';
-        document.getElementById('phone').value = '';
-      }
-    });
+      isLoggedIn = true;
+      logoutBtn.style.display = 'block';
 
-    document.getElementById('contactForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
+      await fetchCsrfToken();
 
-      const res = await fetch('/contacts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-csrf-token': csrfToken
-        },
-        credentials: 'include',
-        body: JSON.stringify({
+    } catch (err) {
+      log(err.response?.data || { error: 'Login failed' });
+    }
+  });
+
+  logoutBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+
+    try {
+      const res = await axios.post(
+        '/logout',
+        {},
+        {
+          withCredentials: true,
+          headers: {
+            'x-csrf-token': csrfToken
+          }
+        }
+      );
+
+      log(res.data);
+
+      isLoggedIn = false;
+      csrfToken = '';
+      logoutBtn.style.display = 'none';
+
+      document.getElementById('name').value = '';
+      document.getElementById('phone').value = '';
+
+    } catch (err) {
+      log(err.response?.data || { error: 'Logout failed' });
+    }
+  });
+
+  document.getElementById('contactForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    try {
+      const res = await axios.post(
+        '/contacts',
+        {
           name: document.getElementById('name').value,
           phone: document.getElementById('phone').value
-        })
-      });
+        },
+        {
+          withCredentials: true,
+          headers: {
+            'x-csrf-token': csrfToken
+          }
+        }
+      );
 
-      const data = await res.json();
-      log(data);
-    });
-  </script>
+      log(res.data);
+
+    } catch (err) {
+      log(err.response?.data || { error: 'Could not add contact' });
+    }
+  });
+</script>
 </body>
 </html>
